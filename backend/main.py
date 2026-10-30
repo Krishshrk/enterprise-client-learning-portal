@@ -24,12 +24,14 @@ from typing import Any, Iterator
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.getenv("AZENTIO_DB_PATH", str(BASE_DIR / "azentio.db")))
+FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
+SPA_INDEX = FRONTEND_DIST / "index.html"
 ENV = os.getenv("AZENTIO_ENV", "development").lower()
 COOKIE_NAME = "azentio_session"
 SESSION_SECONDS = 8 * 60 * 60
@@ -492,14 +494,26 @@ def health() -> dict[str, str]:
 
 @app.get("/products", include_in_schema=False)
 def products_route():
-    return RedirectResponse("/products.html", status_code=307)
+    return spa_response()
 
 
 @app.get("/products/{category}", include_in_schema=False)
 def category_route(category: str):
     if category not in {p["slug"] for p in PRODUCTS}:
         raise HTTPException(404, "Product category not found")
-    return RedirectResponse(f"/products.html?category={category}", status_code=307)
+    return spa_response()
+
+
+@app.get("/product/{category}/{name}", include_in_schema=False)
+def product_detail_route(category: str, name: str):
+    if category not in {p["slug"] for p in PRODUCTS}:
+        raise HTTPException(404, "Product category not found")
+    return spa_response()
+
+
+@app.get("/portal", include_in_schema=False)
+def portal_route():
+    return spa_response()
 
 
 @app.get("/solutions", include_in_schema=False)
@@ -529,7 +543,13 @@ def interest_route():
 
 @app.get("/login", include_in_schema=False)
 def login_route():
-    return RedirectResponse("/login.html", status_code=307)
+    return spa_response()
+
+
+def spa_response():
+    if not SPA_INDEX.is_file():
+        raise HTTPException(503, "React frontend is not built. Run npm run build in the frontend directory.")
+    return FileResponse(SPA_INDEX)
 
 
 @app.get("/api/products")
@@ -1068,7 +1088,7 @@ def submit_experiment(experiment_id: str, user=Depends(require_roles("employee",
 
 
 @app.get("/api/employee/live")
-def employee_live(user=Depends(require_roles("employee", "portal_admin"))) -> list[dict[str, Any]]:
+def employee_live(user=Depends(require_roles("employee", "content_publisher", "portal_admin"))) -> list[dict[str, Any]]:
     return []
 
 
@@ -1097,7 +1117,7 @@ def employee_demo_runs(user=Depends(require_roles("employee", "portal_admin"))) 
 
 
 @app.get("/api/employee/learning")
-def employee_learning(user=Depends(require_roles("employee", "portal_admin"))) -> list[dict[str, Any]]:
+def employee_learning(user=Depends(require_roles("employee", "content_publisher", "portal_admin"))) -> list[dict[str, Any]]:
     return learning_themes(user)
 
 
@@ -1140,4 +1160,9 @@ def audit_log(user=Depends(require_roles("portal_admin", "learning_moderator")))
     return [{**dict(r), "detail": json.loads(r["detail"])} for r in rows]
 
 
-app.mount("/", StaticFiles(directory=BASE_DIR.parent / "frontend", html=True), name="frontend")
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+else:
+    @app.get("/", include_in_schema=False)
+    def frontend_not_built():
+        return spa_response()

@@ -9,3 +9,7 @@ venv/
 .ruff_cache/
 problem_explanation_ceefrj5dzg8.pdf
 *.log
+node_modules/
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*

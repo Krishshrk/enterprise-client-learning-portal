@@ -2,7 +2,7 @@
 
 An enterprise collaboration sub-product concept inspired by Azentio's financial technology domains. It is not Azentio's corporate website or an official Azentio product. The experience demonstrates how clients and employees could submit observations, have them reviewed, and turn approved evidence into product improvement ideas.
 
-The public experience uses HTML, CSS, and JavaScript. FastAPI serves the website and API. SQLite and fictional demo accounts are provided for local evaluation.
+The frontend is a React single-page application built with Vite. FastAPI provides the API and serves the compiled React bundle in deployment. SQLite and fictional demo accounts are provided for local evaluation.
 
 ## Run locally
 
@@ -13,10 +13,23 @@ py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
+```
+
+Use two terminals from the repository root. Start the API in the first:
+
+```powershell
 python -m uvicorn backend.main:app --reload --env-file .env
 ```
 
-Open `http://127.0.0.1:8000`. In development, the API schema is at `/docs`. The SQLite database is created at `backend/azentio.db` unless `AZENTIO_DB_PATH` is set.
+Install and start the React frontend in the second:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Open the Vite URL shown in the terminal (normally `http://localhost:5173`). Vite proxies `/api` requests to FastAPI. In development, the API schema is at `http://127.0.0.1:8000/docs`. The SQLite database is created at `backend/azentio.db` unless `AZENTIO_DB_PATH` is set.
 
 ## Synthetic demo accounts
 
@@ -30,11 +43,11 @@ When `AZENTIO_DEMO_SEED=true` (the default outside production), startup provisio
 - `owner@azentio.test` - product owner
 - `employee@azentio.test` - employee
 
-Open `/login.html`, choose a synthetic account, and select **Use selected demo account**. Demo records are fictional. Never enter real customer, account, transaction, or confidential information.
+Open `/login`, choose a synthetic account, and use the password above. Demo records are fictional. Never enter real customer, account, transaction, or confidential information.
 
 ## Included workflows
 
-- Azentio-inspired responsive landing page, product catalogue and product detail templates, demo request form, and role-aware portal.
+- React and Vite frontend with an Azentio-inspired responsive landing page, product catalogue and detail templates, demo request form, and role-aware portal.
 - Signed, expiring HttpOnly session cookies; passwords are hashed with scrypt. Login errors do not reveal whether an account exists. Local per-process throttling limits repeated attempts.
 - Role-checked client, client administrator, employee, moderator, product owner, and portal administrator API paths.
 - Workspace switching validated against server-loaded memberships and client product entitlement checks.
@@ -67,7 +80,7 @@ Copy `.env.example` for local development. Before any internet-facing deployment
 - Configure private object storage, malware scanning, retention and deletion policy, backups, monitoring, secrets management, and email delivery before accepting real contributions or sending invitations.
 - Review privacy notices, data residency, consent language, audit retention, accessibility, and product content with authorized teams.
 
-`Dockerfile` and `compose.yaml` provide a non-root container for evaluation. Compose expects a local `.env`. The SQLite database persists only through the mounted volume; it is not a managed production database.
+`Dockerfile` builds the React bundle in a Node stage and copies it into the non-root FastAPI image. `compose.yaml` provides a container for evaluation and expects a local `.env`. The SQLite database persists only through the mounted volume; it is not a managed production database.
 
 ## Deliberate limits
 
