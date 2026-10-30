@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+backend/azentio.db
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+problem_explanation_ceefrj5dzg8.pdf
+*.log
