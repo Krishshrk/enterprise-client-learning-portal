@@ -40,10 +40,24 @@ When `AZENTIO_DEMO_SEED=true` (the default outside production), startup provisio
 - `client@horizon.test` - Horizon Islamic Bank client member
 - `client@summit.test` - Summit Financial Services client member
 - `moderator@azentio.test` - learning moderator
+- `publisher@azentio.test` - content publisher
 - `owner@azentio.test` - product owner
+- `portaladmin@azentio.test` - portal administrator
 - `employee@azentio.test` - employee
 
 Open `/login`, choose a synthetic account, and use the password above. Demo records are fictional. Never enter real customer, account, transaction, or confidential information.
+
+### Optional Groq-powered AIRA
+
+AIRA searches only approved, consented shared contributions. By default it returns deterministic evidence retrieval. To enable a Groq summary, create a Groq API key, put it in `GROQ_API_KEY` in your local `.env`, and restart FastAPI. `GROQ_MODEL` defaults to `llama-3.3-70b-versatile` and can be changed to another model available to your Groq account. The key stays on the server; the user's question and retrieved approved shared representations are sent to Groq. Private drafts, organization-only observations, moderation notes, and employee-only material are not included. If Groq is unavailable, AIRA falls back to deterministic evidence retrieval. Groq model access, free-tier limits, and availability depend on your account and may change.
+
+Suggested judging flow:
+
+1. Sign in as `maya@meridian.test`, create a synthetic observation and submit it for community review.
+2. Sign in as `moderator@azentio.test`, redact the shared copy and approve contributions; use the seeded Summit item to exercise clarification.
+3. Sign in as `client@summit.test` to edit and resubmit the returned observation, then approve it as moderator.
+4. Search the approved `Seasonality Context` evidence in Shared learning or AIRA.
+5. Sign in as `owner@azentio.test` and create an improvement idea linked to the displayed `OBS-...` references.
 
 ## Included workflows
 
@@ -55,7 +69,7 @@ Open `/login`, choose a synthetic account, and use the password above. Demo reco
 - Private-by-default observation drafts, explicit processing consent, separately recorded sharing, attribution, and model-training consent, author-only draft access, organization-visible contributions, clarification and resubmission, version history, and withdrawal.
 - Moderation workflow with private originals separated from reviewed shared representations, basic sensitive-string warnings, approve / clarify / reject / unpublish actions, contributor notifications, and audit events.
 - Approved shared-learning search and theme grouping. Cross-organization themes require a configurable cohort (default three) and state that cohort size is not a formal anonymity guarantee.
-- AIRA-style evidence retrieval with source references and uncertainty boundaries. The current implementation is deterministic search, not an LLM integration.
+- AIRA retrieval over approved shared evidence, with source references, uncertainty boundaries, optional Groq-generated grounded summaries, and deterministic fallback.
 - Evidence-linked improvement ideas, client-safe updates, status audit history, team access listing / revocation, and employee experiment drafts.
 - Content Security Policy and baseline security headers, origin checks on API mutations, production-required session secret, API docs disabled in production mode, and a non-root container image.
 
