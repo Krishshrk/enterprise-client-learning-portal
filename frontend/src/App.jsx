@@ -10,7 +10,7 @@ const products = {
 };
 const categories = Object.entries(products);
 const api = async (path, options = {}) => {
-  const response = await fetch(`/api${path}`, { credentials: 'same-origin', ...options, headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) } });
+  const response = await fetch(`/api${path}`, { credentials: 'same-origin', cache: 'no-store', ...options, headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) } });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) { const detail = body.detail; throw new Error(typeof detail === 'string' ? detail : detail?.message || JSON.stringify(detail) || `Request failed (${response.status})`); }
   return body;
