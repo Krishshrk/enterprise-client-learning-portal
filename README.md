@@ -4,6 +4,54 @@ An enterprise collaboration sub-product concept inspired by Azentio's financial 
 
 The frontend is a React single-page application built with Vite. FastAPI provides the API and serves the compiled React bundle in deployment. SQLite and fictional demo accounts are provided for local evaluation.
 
+## How the platform works
+
+The diagram shows the main user journey and the boundary between private client records and approved shared learning.
+
+```mermaid
+flowchart TD
+    Visitor[Public visitor] --> PublicSite[React public website]
+    PublicSite --> Catalogue[Product catalogue]
+    PublicSite --> DemoForm[Demo request form]
+
+    Client[Client member] --> Portal[React authenticated portal]
+    Employee[Employee] --> Portal
+    Moderator[Learning moderator] --> Portal
+    ProductOwner[Product owner] --> Portal
+    Portal --> API[FastAPI API]
+    DemoForm --> API
+    API --> Access[Session, role, workspace and entitlement checks]
+
+    Access --> ClientWorkspace[Client workspace]
+    ClientWorkspace --> Observation[Observation]
+    Observation --> Consent{Sharing choice and consent}
+    Consent -->|Private or organization only| TenantRecords[Workspace-scoped records]
+    Consent -->|Explicit community-sharing consent| Queue[Moderation queue]
+    Queue --> Review{Human review and redaction}
+    Review -->|Clarification requested| ClientWorkspace
+    Review -->|Rejected| Rejected[Not published]
+    Review -->|Approved shared copy| Shared[Approved shared learning]
+
+    Shared --> Search[Evidence search]
+    Shared --> AIRA[AIRA assistant]
+    AIRA -->|Groq configured| Groq[Groq summary]
+    AIRA -->|No Groq key| Retrieval[Deterministic retrieval]
+    Groq --> Answer[Answer with approved source references]
+    Retrieval --> Answer
+    Shared --> Themes[Evidence themes]
+    Themes --> ProductOwner
+    ProductOwner --> Idea[Evidence-linked improvement idea]
+    Idea --> Update[Product status update]
+    Update --> ClientWorkspace
+
+    Access --> EmployeeTools[Employee tools]
+    EmployeeTools --> Playground[Synthetic product demos]
+    EmployeeTools --> Experiment[Private experiment drafts]
+    EmployeeTools --> Shared
+```
+
+Private drafts and employee experiment drafts stay out of shared search and AIRA. Groq receives only the question and excerpts from approved shared contributions when configured.
+
 ## Run locally
 
 Requires Python 3.10 or later.
