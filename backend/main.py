@@ -29,9 +29,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = Path(os.getenv("AZENTIO_DB_PATH", str(BASE_DIR / "azentio.db")))
+REPO_DIR = BASE_DIR.parent
+# Load local config independently of the shell's working directory. Existing
+# process environment variables (including container settings) take precedence.
+load_dotenv(REPO_DIR / ".env", override=False)
+_configured_db_path = Path(os.getenv("AZENTIO_DB_PATH", str(BASE_DIR / "azentio.db")))
+DB_PATH = _configured_db_path if _configured_db_path.is_absolute() else (REPO_DIR / _configured_db_path).resolve()
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 SPA_INDEX = FRONTEND_DIST / "index.html"
 ENV = os.getenv("AZENTIO_ENV", "development").lower()
