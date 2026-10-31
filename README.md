@@ -83,7 +83,7 @@ Open the Vite URL shown in the terminal (normally `http://localhost:5173`). Vite
 
 When `AZENTIO_DEMO_SEED=true` (the default outside production), startup provisions fictional users and three fictional organizations. Unless overridden with `AZENTIO_DEMO_PASSWORD` before the first database initialization, the local development password is `Demo-Portal-2026!`.
 
-The seed also creates fictional private drafts, organization-visible observations, a three-organization approved Digital Onboarding theme, a product-owner idea with evidence links, an employee experiment, notifications, and synthetic upcoming employee sessions. Seeding is idempotent and runs at API startup when enabled. Restart FastAPI after changing this setting. The separate Seasonality Context observations remain pending/clarification items so the moderation and resubmission journey can still be demonstrated.
+The seed creates fictional private drafts, organization-visible observations, pending and clarification-requested contributions, and three approved cross-organization themes: Digital Onboarding, Payment Reconciliation, and Service Request Transparency. It also creates evidence-linked product ideas at different workflow stages, employee experiment drafts, notifications, and two synthetic upcoming learning sessions. The employee overview brings drafts, approved-evidence count, and upcoming sessions together. Seeding is idempotent and runs at API startup when enabled; restart FastAPI after changing this setting. These records are fictional presentation data, not Azentio customer research or market findings.
 
 - `maya@meridian.test` - Meridian Finance client member
 - `admin@meridian.test` - Meridian Finance client administrator
@@ -103,11 +103,12 @@ AIRA searches only approved, consented shared contributions. By default it retur
 
 Suggested judging flow:
 
-1. Sign in as `maya@meridian.test`, create a synthetic observation and submit it for community review.
-2. Sign in as `moderator@azentio.test`, redact the shared copy and approve contributions; use the seeded Summit item to exercise clarification.
-3. Sign in as `client@summit.test` to edit and resubmit the returned observation, then approve it as moderator.
-4. Search the approved `Seasonality Context` evidence in Shared learning or AIRA.
-5. Sign in as `owner@azentio.test` and create an improvement idea linked to the displayed `OBS-...` references.
+1. Sign in as `maya@meridian.test`, open My observations, and create a synthetic contribution. Keep it private, share it with the organization, or request community review with the separate consent checkbox.
+2. Sign in as `moderator@azentio.test`, review the queue, edit the proposed shared representation, and approve or request clarification. Use the seeded Summit contribution to demonstrate clarification and resubmission.
+3. Sign in as `client@summit.test` to edit and resubmit the returned item, then approve it as moderator.
+4. Open Shared learning or Evidence themes and search the seeded Digital Onboarding, Payment Reconciliation, or Service Request Transparency examples. Ask AIRA about reconciliation or onboarding; it returns approved evidence references and uses deterministic retrieval if Groq is not configured.
+5. Sign in as `owner@azentio.test` to inspect the evidence-linked idea pipeline, or create an idea using displayed `OBS-...` references. Status updates can appear in client Improvement updates.
+6. Sign in as `employee@azentio.test` to see experiment drafts and the upcoming session cards on the overview, then open Approved learning, Live sessions, or Product demos.
 
 ## Included workflows
 
