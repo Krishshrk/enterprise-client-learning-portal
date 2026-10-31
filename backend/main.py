@@ -47,7 +47,9 @@ SESSION_SECRET = os.getenv("AZENTIO_SESSION_SECRET", "")
 if ENV == "production" and len(SESSION_SECRET) < 32:
     raise RuntimeError("AZENTIO_SESSION_SECRET must contain at least 32 characters in production")
 if len(SESSION_SECRET) < 32:
-    SESSION_SECRET = secrets.token_urlsafe(48)
+    # Keep local sessions valid across uvicorn --reload restarts. Production
+    # always requires an externally provided high-entropy secret above.
+    SESSION_SECRET = hashlib.sha256(b"azentio-local-demo-session-secret-not-for-production").hexdigest()
 
 ROLES = {"employee", "client_member", "client_admin", "learning_moderator", "content_publisher", "portal_admin", "product_owner"}
 PRODUCTS = [
