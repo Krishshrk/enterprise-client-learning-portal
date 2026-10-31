@@ -20,7 +20,7 @@ import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import Request as URLRequest, urlopen
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -260,6 +260,68 @@ def seed_demo(db: sqlite3.Connection) -> None:
               (observation_id, org_id, user_ids[email], title, "Banking", "Financial services", "Synthetic", "2026 Q2", "Seasonality Context", "market_observation", body, body, "Medium", "community", status, 1, 1, now, now))
             save_observation_version(db, observation_id, 1, body, body, status, user_ids[email], now)
             save_consents(db, observation_id, user_ids[email], 1, {"processing_consent": True, "share_consent": True}, now)
+
+    def ensure_seed_observation(org_id: str, email: str, title: str, topic: str, body: str, visibility: str, status: str, *, share: bool = False, published: bool = False) -> str:
+        existing = db.execute("SELECT id FROM observations WHERE organization_id=? AND title=?", (org_id, title)).fetchone()
+        if existing:
+            return existing["id"]
+        now, observation_id = utcnow(), str(uuid.uuid4())
+        db.execute("""INSERT INTO observations(id,organization_id,author_id,title,product,industry,region,period,topic,kind,
+          original_private,proposed_shared,evidence,confidence,impact,visibility,status,processing_consent,share_consent,
+          attribution_consent,model_training_consent,created_at,updated_at,published_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+          (observation_id, org_id, user_ids[email], title, "Banking", "Financial services", "Synthetic", "2026 Q2", topic,
+           "market_observation", body, body if visibility != "private" else "", "Synthetic demonstration record", "Medium",
+           "Illustrative product-learning context only", visibility, status, 1, int(share), 0, 0, now, now, now if published else None))
+        save_observation_version(db, observation_id, 1, body, body if visibility != "private" else "", status, user_ids[email], now)
+        save_consents(db, observation_id, user_ids[email], 1, {"processing_consent": True, "share_consent": share}, now)
+        return observation_id
+
+    # A published three-organization theme gives client and employee learning
+    # screens useful synthetic content before the judging workflow is run.
+    onboarding_evidence = []
+    for org_id, email, title, body in [
+        ("meridian", "maya@meridian.test", "Onboarding handoff timing", "Synthetic example: clients described repeated information requests when a digital application moved between onboarding steps."),
+        ("horizon", "client@horizon.test", "Digital onboarding progress visibility", "Synthetic example: applicants may benefit from clearer status updates while identity and document checks are in progress."),
+        ("summit", "client@summit.test", "Application document follow-up", "Synthetic example: teams reported that explaining outstanding document requirements could reduce avoidable application follow-up."),
+    ]:
+        onboarding_evidence.append(ensure_seed_observation(org_id, email, title, "Digital Onboarding", body, "community", "published", share=True, published=True))
+
+    # Organization-visible examples populate each tenant's organization feed;
+    # private drafts give client users a safe editable starting point.
+    for org_id, email, label in [
+        ("meridian", "maya@meridian.test", "Meridian"),
+        ("meridian", "admin@meridian.test", "Meridian administrator"),
+        ("horizon", "client@horizon.test", "Horizon"),
+        ("summit", "client@summit.test", "Summit"),
+    ]:
+        ensure_seed_observation(org_id, email, f"{label} service workflow note", "Service Workflow", "Synthetic internal note: teams are mapping handoff points and collecting non-customer-specific process feedback.", "organization", "published")
+        if email != "admin@meridian.test":
+            ensure_seed_observation(org_id, email, f"{label} private draft", "Service Workflow", "Synthetic private draft for exploring a workflow observation. Replace or delete it during the demo.", "private", "draft")
+
+    # Seed one employee experiment and one synthetic run for the employee portal.
+    employee_id = user_ids["employee@azentio.test"]
+    if not db.execute("SELECT 1 FROM experiments WHERE owner_id=? AND title=?", (employee_id, "Explain seasonal cash-flow context")).fetchone():
+        now, experiment_id = utcnow(), str(uuid.uuid4())
+        db.execute("INSERT INTO experiments(id,owner_id,product,title,description,status,output,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                   (experiment_id, employee_id, "Banking", "Explain seasonal cash-flow context", "Synthetic experiment proposal to show how a reviewer might compare multiple reporting periods without making a credit decision.", "draft", "", now, now))
+    if not db.execute("SELECT 1 FROM demo_runs WHERE user_id=? AND scenario=?", (employee_id, "seasonality-context")).fetchone():
+        sample = {"period_count": 4, "seasonal_pattern": "synthetic example", "input_label": "Synthetic data"}
+        output = {"label": "SYNTHETIC SIMULATION", "scenario": "seasonality-context", "summary": "Illustrative workflow completed. This output is not a financial or business decision.", "sample_values": sample, "evidence": "No external evidence used; demonstration scenario only."}
+        db.execute("INSERT INTO demo_runs(id,organization_id,user_id,product_slug,scenario,input_json,output_json,created_at) VALUES(?,?,?,?,?,?,?,?)",
+                   (str(uuid.uuid4()), "azentio", employee_id, "banking", "seasonality-context", json.dumps(sample), json.dumps(output), utcnow()))
+
+    idea = db.execute("SELECT id FROM improvement_ideas WHERE title=?", ("Improve digital onboarding progress visibility",)).fetchone()
+    if not idea:
+        now, idea_id = utcnow(), str(uuid.uuid4())
+        db.execute("INSERT INTO improvement_ideas(id,title,problem,product,outcome,owner,priority,status,client_update,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                   (idea_id, "Improve digital onboarding progress visibility", "Synthetic client observations suggest applicants may benefit from clearer status and document follow-up across onboarding steps.", "Banking", "Explore a review experience that presents application status with clear evidence boundaries.", "Banking Product Team", "Medium", "Under review", "The product team is reviewing this synthetic evidence theme. No delivery commitment has been made.", user_ids["owner@azentio.test"], now, now))
+        db.executemany("INSERT INTO idea_evidence(idea_id,observation_id) VALUES(?,?)", [(idea_id, oid) for oid in onboarding_evidence])
+
+    for email in ("maya@meridian.test", "admin@meridian.test", "client@horizon.test", "client@summit.test"):
+        if not db.execute("SELECT 1 FROM notifications WHERE user_id=? AND title=?", (user_ids[email], "New approved shared learning")).fetchone():
+            db.execute("INSERT INTO notifications(id,user_id,title,body,resource_type,resource_id,created_at) VALUES(?,?,?,?,?,?,?)",
+                       (str(uuid.uuid4()), user_ids[email], "New approved shared learning", "A synthetic Digital Onboarding theme is available in Shared learning.", "theme", "Digital Onboarding", utcnow()))
 
 
 class LoginPayload(BaseModel):
@@ -1129,7 +1191,14 @@ def submit_experiment(experiment_id: str, user=Depends(require_roles("employee",
 
 @app.get("/api/employee/live")
 def employee_live(user=Depends(require_roles("employee", "content_publisher", "portal_admin"))) -> list[dict[str, Any]]:
-    return []
+    if os.getenv("AZENTIO_DEMO_SEED", "true" if ENV != "production" else "false").lower() not in {"1", "true", "yes"}:
+        return []
+    first = datetime.now(timezone.utc) + timedelta(days=3)
+    second = datetime.now(timezone.utc) + timedelta(days=7)
+    return [
+        {"id": "synthetic-session-evidence", "title": "Working with approved client evidence", "starts_at": first.isoformat(), "duration_minutes": 30, "host": "Learning & Insights Team", "status": "upcoming", "description": "Synthetic internal walkthrough of evidence review, source references, and uncertainty boundaries."},
+        {"id": "synthetic-session-playground", "title": "Product Playground: seasonal cash-flow context", "starts_at": second.isoformat(), "duration_minutes": 45, "host": "Banking Product Team", "status": "upcoming", "description": "Illustrative scenario using synthetic inputs. No credit or financial decisions are produced."},
+    ]
 
 
 @app.get("/api/employee/demos")

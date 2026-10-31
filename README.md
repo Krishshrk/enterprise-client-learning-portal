@@ -35,6 +35,8 @@ Open the Vite URL shown in the terminal (normally `http://localhost:5173`). Vite
 
 When `AZENTIO_DEMO_SEED=true` (the default outside production), startup provisions fictional users and three fictional organizations. Unless overridden with `AZENTIO_DEMO_PASSWORD` before the first database initialization, the local development password is `Demo-Portal-2026!`.
 
+The seed also creates fictional private drafts, organization-visible observations, a three-organization approved Digital Onboarding theme, a product-owner idea with evidence links, an employee experiment, notifications, and synthetic upcoming employee sessions. Seeding is idempotent and runs at API startup when enabled. Restart FastAPI after changing this setting. The separate Seasonality Context observations remain pending/clarification items so the moderation and resubmission journey can still be demonstrated.
+
 - `maya@meridian.test` - Meridian Finance client member
 - `admin@meridian.test` - Meridian Finance client administrator
 - `client@horizon.test` - Horizon Islamic Bank client member
